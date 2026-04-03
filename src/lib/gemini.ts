@@ -1,7 +1,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const apiKey = process.env.GEMINI_API_KEY || "";
-const genAI = new GoogleGenAI({ apiKey });
+const getApiKey = () => {
+  const key = process.env.GEMINI_API_KEY;
+  if (key && key !== "MY_GEMINI_API_KEY") return key;
+  
+  const storedKey = typeof window !== 'undefined' ? localStorage.getItem('smart_study_api_key') : null;
+  if (storedKey) return storedKey;
+
+  throw new Error("Gemini API Key is missing. Please set GEMINI_API_KEY in your environment or enter it in the app settings.");
+};
+
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export const models = {
   flash: "gemini-3-flash-preview",
@@ -9,7 +18,7 @@ export const models = {
 };
 
 export async function getResources(query: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: models.flash,
@@ -33,7 +42,7 @@ export async function getResources(query: string) {
 }
 
 export async function generateQuizFromTopic(topic: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: models.flash,
@@ -120,7 +129,7 @@ export async function generateQuizFromTopic(topic: string) {
 }
 
 export async function analyzeImage(base64Image: string, prompt: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: models.flash,
@@ -142,7 +151,7 @@ export async function analyzeImage(base64Image: string, prompt: string) {
 }
 
 export async function generateSummary(text: string, url?: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: models.flash,
@@ -175,7 +184,7 @@ export async function generateSummary(text: string, url?: string) {
 }
 
 export async function analyzeUrl(url: string, question: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: models.flash,
@@ -202,7 +211,7 @@ export async function analyzeUrl(url: string, question: string) {
 }
 
 export async function generateComprehensiveQuiz(text: string, url?: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: models.flash,

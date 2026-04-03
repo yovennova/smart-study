@@ -14,6 +14,9 @@ import {
   RefreshCw,
   Link as LinkIcon,
   CheckCircle2,
+  Settings,
+  ShieldAlert,
+  Key,
   HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -264,7 +267,15 @@ const Card = ({ children, className, title, subtitle, icon: Icon }: { children: 
 export default function App() {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [language, setLanguage] = useState<Language>('en');
+  const [showSettings, setShowSettings] = useState(false);
+  const [customApiKey, setCustomApiKey] = useState(localStorage.getItem('smart_study_api_key') || '');
   const t = translations[language];
+
+  const effectiveApiKey = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY" 
+    ? process.env.GEMINI_API_KEY 
+    : customApiKey;
+
+  const isKeyMissing = !effectiveApiKey;
 
   const [inputText, setInputText] = useState('');
   const [urlInput, setUrlInput] = useState('');
@@ -317,6 +328,10 @@ export default function App() {
 
   const handleSendMessage = async () => {
     if (!chatInput && !selectedImage) return;
+    if (isKeyMissing) {
+      setShowSettings(true);
+      return;
+    }
     const userMsg = chatInput;
     const userImg = selectedImage;
     setChatInput('');
@@ -334,7 +349,8 @@ export default function App() {
       } else {
         const urlRegex = /(https?:\/\/[^\s]+)/g;
         const urls = userMsg.match(urlRegex);
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+        
+        const ai = new GoogleGenAI({ apiKey: effectiveApiKey });
 
         if (urls && urls.length > 0) {
           // If a URL is detected, use generateContent with urlContext and googleSearch for better analysis
@@ -395,6 +411,10 @@ export default function App() {
 
   const handleSummarize = async () => {
     if (!inputText && !urlInput) return;
+    if (isKeyMissing) {
+      setShowSettings(true);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -413,6 +433,10 @@ export default function App() {
 
   const handleGenerateQuiz = async () => {
     if (!inputText && !urlInput && !quizTopic) return;
+    if (isKeyMissing) {
+      setShowSettings(true);
+      return;
+    }
     setLoading(true);
     setError(null);
     setQuizAnswers({});
@@ -439,6 +463,10 @@ export default function App() {
 
   const handleUrlAnalysis = async () => {
     if (!urlInput) return;
+    if (isKeyMissing) {
+      setShowSettings(true);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -467,6 +495,10 @@ export default function App() {
   };
 
   const handleGetResources = async (query: string) => {
+    if (isKeyMissing) {
+      setShowSettings(true);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -501,6 +533,7 @@ export default function App() {
           <SidebarItem icon={HelpCircle} label={t.quizGenerator} active={activeView === 'quiz'} onClick={() => setActiveView('quiz')} />
           <SidebarItem icon={LinkIcon} label={t.urlAnalysis} active={activeView === 'url-analysis'} onClick={() => setActiveView('url-analysis')} />
           <SidebarItem icon={Sparkles} label={t.resources} active={activeView === 'resources'} onClick={() => setActiveView('resources')} />
+          <SidebarItem icon={Settings} label={language === 'en' ? "Settings" : "ቅንብሮች"} active={showSettings} onClick={() => setShowSettings(true)} />
         </nav>
 
         <div className="mt-auto flex flex-col gap-4">
@@ -544,6 +577,31 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 p-10 overflow-y-auto">
+        {isKeyMissing && (
+          <div className="mb-8 p-6 rounded-3xl bg-red-500/10 border border-red-500/20 flex flex-col md:flex-row items-center gap-6">
+            <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center text-red-500 shrink-0">
+              <ShieldAlert size={32} />
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h3 className="text-xl font-bold text-red-400 mb-1">
+                {language === 'en' ? "API Key Required" : "የAPI ቁልፍ ያስፈልጋል"}
+              </h3>
+              <p className="text-zinc-400 text-sm max-w-2xl">
+                {language === 'en' 
+                  ? "To use Smart Study AI, you need to connect your Gemini API Key. You can set it in your environment variables or enter it manually in settings." 
+                  : "Smart Study AIን ለመጠቀም የGemini API ቁልፍዎን ማገናኘት አለብዎት። በአካባቢዎ ተለዋዋጮች ውስጥ ሊያዘጋጁት ወይም በቅንብሮች ውስጥ በእጅዎ ሊያስገቡት ይችላሉ።"}
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="px-6 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all flex items-center gap-2 shrink-0"
+            >
+              <Key size={18} />
+              {language === 'en' ? "Connect Key" : "ቁልፍ አገናኝ"}
+            </button>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {activeView === 'dashboard' && (
             <motion.div
@@ -1157,6 +1215,67 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {showSettings && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-8 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-accent-yellow flex items-center gap-3">
+                  <Settings size={24} />
+                  {language === 'en' ? "Settings" : "ቅንብሮች"}
+                </h2>
+                <button onClick={() => setShowSettings(false)} className="text-zinc-500 hover:text-white">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-zinc-400 mb-2 uppercase tracking-wider">
+                    {language === 'en' ? "Gemini API Key" : "የGemini API ቁልፍ"}
+                  </label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                    <input 
+                      type="password"
+                      value={customApiKey}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomApiKey(val);
+                        localStorage.setItem('smart_study_api_key', val);
+                      }}
+                      placeholder="AIzaSy..."
+                      className="w-full p-4 pl-10 rounded-2xl bg-zinc-900 border border-zinc-800 focus:ring-2 focus:ring-accent-yellow outline-none transition-all text-white"
+                    />
+                  </div>
+                  <p className="mt-3 text-xs text-zinc-500 leading-relaxed">
+                    {language === 'en' 
+                      ? "Your key is stored locally in your browser and is never sent to our servers. Get your key at " 
+                      : "ቁልፍዎ በአሳሽዎ ውስጥ በአካባቢው ተቀምጧል እና በጭራሽ ወደ አገልጋዮቻችን አይላክም። ቁልፍዎን እዚህ ያግኙ "}
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-accent-yellow hover:underline">aistudio.google.com</a>
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-zinc-800">
+                  <button 
+                    onClick={() => setShowSettings(false)}
+                    className="w-full bg-accent-yellow text-black py-4 rounded-2xl font-bold hover:bg-yellow-400 transition-all"
+                  >
+                    {language === 'en' ? "Save & Close" : "አስቀምጥ እና ዝጋ"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
