@@ -1,0 +1,7 @@
+{
+  "name": "Smart Study",
+  "description": "An AI-powered study companion that helps students with questions, PDF analysis via URL or upload, and generates comprehensive quizzes including MCQ, True/False, Matching, and more.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
